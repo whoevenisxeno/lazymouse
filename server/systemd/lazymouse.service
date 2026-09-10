@@ -1,0 +1,11 @@
+[Unit]
+Description=LazyMouse server (phone-as-trackpad)
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/dv/lazymouse/server/run.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,9 @@
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/*.iml
+**/__pycache__/
+*.pyc
+.DS_Store
