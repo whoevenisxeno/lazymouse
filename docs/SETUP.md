@@ -43,8 +43,9 @@ adb connect <phone-wifi-ip>:5555
 ## Using it
 
 1. Phone and PC on the same Wi-Fi / LAN.
-2. Open LazyMouse. Nearby servers show up automatically (mDNS); tap one to fill the
-   host and port, or type `IP : 8098`, or scan the QR. Enter the key, connect.
+2. Open LazyMouse. It scans the local network and lists any servers it finds
+   ("detected on lan"); tap one to fill the host and port. Or type `IP : 8098`,
+   or scan the QR. Enter the key, connect.
 3. Drag to move. Tap to left click. Two-finger tap for right click.
    Two-finger drag to scroll. Long-press for drag-lock (tap to drop).
    Bottom bar is hold-to-hold Left / Mid / Right. KEYS opens the keyboard.

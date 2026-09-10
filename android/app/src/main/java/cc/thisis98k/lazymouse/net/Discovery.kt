@@ -1,53 +1,76 @@
 package cc.thisis98k.lazymouse.net
 
-import android.content.Context
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.util.concurrent.TimeUnit
 
 data class Host(val label: String, val ip: String, val port: Int)
 
-private const val TYPE = "_lazymouse._tcp."
+private const val HTTP_PORT = 8099
 
-class Discovery(context: Context) {
-    private val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+class Discovery {
     val hosts = MutableStateFlow<List<Host>>(emptyList())
+    val scanning = MutableStateFlow(false)
 
-    private var listener: NsdManager.DiscoveryListener? = null
+    private val http = OkHttpClient.Builder()
+        .connectTimeout(400, TimeUnit.MILLISECONDS)
+        .readTimeout(400, TimeUnit.MILLISECONDS)
+        .build()
+    private var job: Job? = null
 
-    private fun add(h: Host) {
-        hosts.value = (hosts.value.filter { it.ip != h.ip } + h).sortedBy { it.label }
+    private fun localPrefix(): String? {
+        for (nif in NetworkInterface.getNetworkInterfaces()) {
+            if (!nif.isUp || nif.isLoopback) continue
+            for (addr in nif.interfaceAddresses) {
+                val a = addr.address
+                if (a is Inet4Address && !a.isLoopbackAddress && a.isSiteLocalAddress) {
+                    return a.hostAddress?.substringBeforeLast('.')
+                }
+            }
+        }
+        return null
     }
 
-    @Suppress("DEPRECATION")
-    private fun resolve(info: NsdServiceInfo) {
-        nsd.resolveService(info, object : NsdManager.ResolveListener {
-            override fun onResolveFailed(s: NsdServiceInfo?, code: Int) {}
-            override fun onServiceResolved(s: NsdServiceInfo) {
-                val ip = s.host?.hostAddress ?: return
-                val name = s.attributes?.get("host")?.let { String(it) } ?: s.serviceName
-                add(Host(name, ip, s.port))
-            }
-        })
+    private fun probe(ip: String): Host? = try {
+        http.newCall(Request.Builder().url("http://$ip:$HTTP_PORT/id").build()).execute().use { r ->
+            val body = r.body?.string().orEmpty()
+            val o = JSONObject(body)
+            if (o.optString("app") == "lazymouse")
+                Host(o.optString("host", ip), ip, o.optInt("port", 8098))
+            else null
+        }
+    } catch (_: Exception) {
+        null
     }
 
     fun start() {
-        if (listener != null) return
+        if (job?.isActive == true) return
+        val prefix = localPrefix() ?: return
         hosts.value = emptyList()
-        val l = object : NsdManager.DiscoveryListener {
-            override fun onStartDiscoveryFailed(t: String?, e: Int) {}
-            override fun onStopDiscoveryFailed(t: String?, e: Int) {}
-            override fun onDiscoveryStarted(t: String?) {}
-            override fun onDiscoveryStopped(t: String?) {}
-            override fun onServiceFound(info: NsdServiceInfo) = resolve(info)
-            override fun onServiceLost(info: NsdServiceInfo) {}
+        scanning.value = true
+        job = CoroutineScope(Dispatchers.IO).launch {
+            (1..254).map { n ->
+                async { probe("$prefix.$n") }
+            }.awaitAll().filterNotNull().let { found ->
+                hosts.value = found.sortedBy { it.label.lowercase() }
+            }
+            scanning.value = false
         }
-        listener = l
-        runCatching { nsd.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, l) }
     }
 
     fun stop() {
-        listener?.let { runCatching { nsd.stopServiceDiscovery(it) } }
-        listener = null
+        job?.cancel()
+        job = null
+        scanning.value = false
     }
 }

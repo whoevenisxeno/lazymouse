@@ -84,6 +84,10 @@ margin:24px 0}}</style>
 """
 
 
+async def _id(_req):
+    return web.json_response({"app": "lazymouse", "host": HOSTNAME, "port": WS_PORT})
+
+
 async def _pair_page(_req):
     import subprocess
     try:
@@ -112,6 +116,7 @@ def _advertise():
 async def main():
     app = web.Application()
     app.router.add_get("/", _pair_page)
+    app.router.add_get("/id", _id)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", HTTP_PORT).start()

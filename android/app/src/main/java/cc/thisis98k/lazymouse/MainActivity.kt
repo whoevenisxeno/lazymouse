@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val prefs = Prefs(applicationContext)
         val settings = SettingsStore(applicationContext)
-        val discovery = Discovery(applicationContext)
+        val discovery = Discovery()
 
         setContent {
             LazyMouseTheme {

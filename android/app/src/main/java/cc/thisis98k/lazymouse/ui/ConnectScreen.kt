@@ -67,6 +67,7 @@ fun ConnectScreen(
     var token by remember(last) { mutableStateOf(last?.token ?: "") }
     val state by client.state.collectAsState()
     val found by discovery.hosts.collectAsState()
+    val scanning by discovery.scanning.collectAsState()
 
     DisposableEffect(Unit) {
         discovery.start()
@@ -106,9 +107,17 @@ fun ConnectScreen(
             Kicker(">_ connect")
             Spacer(Modifier.height(20.dp))
             Panel(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Kicker(
+                        if (scanning) "scanning lan..."
+                        else if (found.isEmpty()) "no servers found"
+                        else "detected on lan",
+                        Modifier.weight(1f),
+                    )
+                    if (!scanning) GhostButton("rescan") { discovery.start() }
+                }
+                Spacer(Modifier.height(12.dp))
                 if (found.isNotEmpty()) {
-                    Kicker("detected on lan")
-                    Spacer(Modifier.height(10.dp))
                     found.forEach { h ->
                         Row(
                             Modifier.fillMaxWidth()
