@@ -23,6 +23,19 @@ command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -f "$ICONS"
 
 echo "installed. search 'LazyMouse' in your launcher, or run: python3 $PWD/app.py"
 echo
+
+if command -v firewall-cmd >/dev/null && firewall-cmd --state 2>/dev/null | grep -q running; then
+    echo "firewalld is running and will block phones on the LAN from reaching the server."
+    read -rp "open ports 8098-8099 for the local network now (needs sudo)? [y/N] " fw
+    if [ "$fw" = y ] || [ "$fw" = Y ]; then
+        lan=$(ip -o -4 addr show scope global | awk '{print $4}' | head -1)
+        sudo firewall-cmd --permanent --zone=public \
+            --add-rich-rule="rule family=ipv4 source address=$lan port port=8098-8099 protocol=tcp accept"
+        sudo firewall-cmd --reload
+        echo "opened 8098-8099 for $lan."
+    fi
+fi
+
 read -rp "also start it on login (systemd user service)? [y/N] " a
 if [ "$a" = y ] || [ "$a" = Y ]; then
     systemctl --user enable --now "$PWD/systemd/lazymouse.service"

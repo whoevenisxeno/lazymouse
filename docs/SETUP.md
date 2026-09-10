@@ -33,12 +33,28 @@ any time to see the QR).
 Requirements (all present on this box): python `evdev`, `websockets`, `aiohttp`,
 `qrcode`, `tkinter`; the `wtype`, `qrencode` and `cloudflared` binaries.
 
-### VPN
+### Firewall (PC)
+
+If the PC runs firewalld or ufw, it blocks LAN devices from reaching ports
+8098-8099 even though the server is listening. `same wifi` mode then fails
+while `anywhere` still works (the tunnel connects to localhost). Open the
+ports for the LAN:
+
+```bash
+lan=$(ip -o -4 addr show scope global | awk '{print $4}' | head -1)
+sudo firewall-cmd --permanent --zone=public \
+  --add-rich-rule="rule family=ipv4 source address=$lan port port=8098-8099 protocol=tcp accept"
+sudo firewall-cmd --reload
+```
+
+`install.sh` offers to do this.
+
+### VPN (phone)
 
 If the phone runs a VPN with a kill switch (Surfshark, etc.), it routes LAN
-traffic to the PC into the tunnel and the "same wifi" mode cannot connect.
+traffic to the PC into the tunnel and `same wifi` mode cannot connect.
 Either disconnect the VPN, add LazyMouse to the VPN's split-tunnel / bypass
-list, or use the "anywhere" tab (which the VPN passes fine).
+list, or use the `anywhere` tab (which the VPN passes fine).
 
 ## Phone app
 
