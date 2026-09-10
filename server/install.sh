@@ -15,7 +15,7 @@ for s in 48 64 128 256; do
     cp "$f" "$d/lazymouse.png"
 done
 
-sed "s|\$HOME|$HOME|g" lazymouse.desktop > "$APPS/lazymouse.desktop"
+sed "s|%HOME%|$HOME|g" lazymouse.desktop > "$APPS/lazymouse.desktop"
 chmod +x "$APPS/lazymouse.desktop"
 
 command -v update-desktop-database >/dev/null && update-desktop-database "$APPS" 2>/dev/null || true
