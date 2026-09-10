@@ -1,6 +1,7 @@
 <resources>
+    <color name="ink_black">#09090B</color>
     <style name="Theme.LazyMouse" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowBackground">@color/ink_black</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>

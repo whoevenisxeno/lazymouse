@@ -12,7 +12,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import cc.thisis98k.lazymouse.data.Prefs
+import cc.thisis98k.lazymouse.data.SettingsStore
 import cc.thisis98k.lazymouse.net.ConnState
+import cc.thisis98k.lazymouse.net.Discovery
 import cc.thisis98k.lazymouse.net.LazyMouseClient
 import cc.thisis98k.lazymouse.ui.ConnectScreen
 import cc.thisis98k.lazymouse.ui.PadScreen
@@ -27,17 +29,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val prefs = Prefs(applicationContext)
+        val settings = SettingsStore(applicationContext)
+        val discovery = Discovery(applicationContext)
 
         setContent {
             LazyMouseTheme {
                 val conn by client.state.collectAsState()
                 var onPad by remember { mutableStateOf(false) }
                 if (onPad && conn == ConnState.Connected) {
-                    PadScreen(client, onBack = { client.disconnect(); onPad = false })
+                    PadScreen(client, settings, onBack = { client.disconnect(); onPad = false })
                 } else {
                     ConnectScreen(
                         client = client,
                         prefs = prefs,
+                        discovery = discovery,
                         onConnected = { onPad = true },
                         save = { ip, p, t -> lifecycleScope.launch { prefs.save(ip, p, t) } },
                     )

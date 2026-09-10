@@ -3,6 +3,7 @@ import json
 import socket
 
 from aiohttp import web
+from websockets.exceptions import ConnectionClosed
 from websockets.asyncio.server import serve
 
 import pair
@@ -62,6 +63,8 @@ async def _handle_ws(ws):
                 _dispatch(json.loads(raw))
             except (ValueError, TypeError, KeyError):
                 continue
+    except ConnectionClosed:
+        pass
     finally:
         if _active["ws"] is ws:
             _active["ws"] = None
@@ -94,12 +97,25 @@ async def _pair_page(_req):
         content_type="text/html")
 
 
+def _advertise():
+    import shutil
+    import subprocess
+    if not shutil.which("avahi-publish-service"):
+        return None
+    return subprocess.Popen(
+        ["avahi-publish-service", f"LazyMouse ({HOSTNAME})",
+         "_lazymouse._tcp", str(WS_PORT), f"host={HOSTNAME}"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
 async def main():
     app = web.Application()
     app.router.add_get("/", _pair_page)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", HTTP_PORT).start()
+    mdns = _advertise()
 
     print("=" * 46)
     print("  LazyMouse server")
@@ -109,8 +125,12 @@ async def main():
     print("=" * 46)
     print(pair.ascii_qr(URI))
 
-    async with serve(_handle_ws, "0.0.0.0", WS_PORT, ping_interval=20):
-        await asyncio.Future()
+    try:
+        async with serve(_handle_ws, "0.0.0.0", WS_PORT, ping_interval=20):
+            await asyncio.Future()
+    finally:
+        if mdns:
+            mdns.terminate()
 
 
 if __name__ == "__main__":
