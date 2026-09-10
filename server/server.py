@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import json
 import socket
 
@@ -84,8 +85,18 @@ margin:24px 0}}</style>
 """
 
 
-async def _id(_req):
-    return web.json_response({"app": "lazymouse", "host": HOSTNAME, "port": WS_PORT})
+def _is_lan(addr: str) -> bool:
+    try:
+        return ipaddress.ip_address(addr).is_private
+    except ValueError:
+        return False
+
+
+async def _id(req):
+    body = {"app": "lazymouse", "host": HOSTNAME, "port": WS_PORT}
+    if req.remote and _is_lan(req.remote):
+        body["key"] = TOKEN
+    return web.json_response(body)
 
 
 async def _status(_req):

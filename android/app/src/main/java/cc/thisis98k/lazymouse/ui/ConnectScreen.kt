@@ -123,7 +123,12 @@ fun ConnectScreen(
                             Modifier.fillMaxWidth()
                                 .border(1.dp, Line2, RoundedCornerShape(8.dp))
                                 .clickable(remember { MutableInteractionSource() }, null) {
-                                    ip = h.ip; port = h.port.toString()
+                                    ip = h.ip
+                                    port = h.port.toString()
+                                    if (h.key != null) {
+                                        token = h.key
+                                        client.connect(h.ip, h.port, h.key)
+                                    }
                                 }
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -131,7 +136,7 @@ fun ConnectScreen(
                             androidx.compose.material3.Text("›", fontFamily = Mono, color = Violet, fontSize = 13.sp)
                             Spacer(Modifier.width(10.dp))
                             MonoText(h.label.lowercase(), Modifier.weight(1f), color = Ink2, size = 13.sp)
-                            MonoText(h.ip, color = Dim, size = 11.sp)
+                            MonoText(if (h.key != null) "tap to link" else h.ip, color = Dim, size = 11.sp)
                         }
                         Spacer(Modifier.height(8.dp))
                     }

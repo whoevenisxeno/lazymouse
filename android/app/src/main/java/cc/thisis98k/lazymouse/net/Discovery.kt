@@ -14,7 +14,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.concurrent.TimeUnit
 
-data class Host(val label: String, val ip: String, val port: Int)
+data class Host(val label: String, val ip: String, val port: Int, val key: String?)
 
 private const val HTTP_PORT = 8099
 
@@ -52,7 +52,8 @@ class Discovery {
         http.newCall(Request.Builder().url("http://$ip:$HTTP_PORT/id").build()).execute().use { r ->
             val o = JSONObject(r.body?.string().orEmpty())
             if (o.optString("app") == "lazymouse")
-                Host(o.optString("host", ip), ip, o.optInt("port", 8098))
+                Host(o.optString("host", ip), ip, o.optInt("port", 8098),
+                    o.optString("key").ifEmpty { null })
             else null
         }
     } catch (_: Exception) {
