@@ -88,6 +88,12 @@ async def _id(_req):
     return web.json_response({"app": "lazymouse", "host": HOSTNAME, "port": WS_PORT})
 
 
+async def _status(_req):
+    ws = _active["ws"]
+    peer = ws.remote_address[0] if ws is not None else None
+    return web.json_response({"connected": ws is not None, "peer": peer})
+
+
 async def _pair_page(_req):
     import subprocess
     try:

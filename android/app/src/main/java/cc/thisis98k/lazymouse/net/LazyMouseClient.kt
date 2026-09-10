@@ -29,7 +29,9 @@ class LazyMouseClient {
         token = tkn
         ws?.cancel()
         state.value = ConnState.Connecting
-        val req = Request.Builder().url("ws://$ip:$port").build()
+        val isHostname = ip.any { it.isLetter() }
+        val url = if (isHostname) "wss://$ip" else "ws://$ip:$port"
+        val req = Request.Builder().url(url).build()
         ws = http.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 webSocket.send(JSONObject().put("t", "hello").put("token", token).toString())

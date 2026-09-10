@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=LazyMouse
+Comment=Turn your phone into a trackpad for this PC
+Exec=sh -c 'cd "$HOME/dv/lazymouse/server" && exec python3 app.py'
+Icon=lazymouse
+Terminal=false
+Categories=Utility;
+StartupNotify=true
