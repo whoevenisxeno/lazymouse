@@ -23,28 +23,34 @@ class Discovery {
     val scanning = MutableStateFlow(false)
 
     private val http = OkHttpClient.Builder()
-        .connectTimeout(400, TimeUnit.MILLISECONDS)
-        .readTimeout(400, TimeUnit.MILLISECONDS)
+        .connectTimeout(900, TimeUnit.MILLISECONDS)
+        .readTimeout(900, TimeUnit.MILLISECONDS)
         .build()
+        .apply { dispatcher.maxRequests = 256; dispatcher.maxRequestsPerHost = 256 }
+
     private var job: Job? = null
 
-    private fun localPrefix(): String? {
-        for (nif in NetworkInterface.getNetworkInterfaces()) {
-            if (!nif.isUp || nif.isLoopback) continue
-            for (addr in nif.interfaceAddresses) {
-                val a = addr.address
-                if (a is Inet4Address && !a.isLoopbackAddress && a.isSiteLocalAddress) {
-                    return a.hostAddress?.substringBeforeLast('.')
+    private fun prefixes(): List<String> {
+        val out = LinkedHashSet<String>()
+        runCatching {
+            for (nif in NetworkInterface.getNetworkInterfaces()) {
+                if (!nif.isUp || nif.isLoopback) continue
+                for (ia in nif.interfaceAddresses) {
+                    val a = ia.address
+                    if (a is Inet4Address && !a.isLoopbackAddress &&
+                        !a.isLinkLocalAddress && !a.isAnyLocalAddress
+                    ) {
+                        a.hostAddress?.let { out.add(it.substringBeforeLast('.')) }
+                    }
                 }
             }
         }
-        return null
+        return out.toList()
     }
 
     private fun probe(ip: String): Host? = try {
         http.newCall(Request.Builder().url("http://$ip:$HTTP_PORT/id").build()).execute().use { r ->
-            val body = r.body?.string().orEmpty()
-            val o = JSONObject(body)
+            val o = JSONObject(r.body?.string().orEmpty())
             if (o.optString("app") == "lazymouse")
                 Host(o.optString("host", ip), ip, o.optInt("port", 8098))
             else null
@@ -55,15 +61,14 @@ class Discovery {
 
     fun start() {
         if (job?.isActive == true) return
-        val prefix = localPrefix() ?: return
+        val prefixes = prefixes()
+        if (prefixes.isEmpty()) return
         hosts.value = emptyList()
         scanning.value = true
         job = CoroutineScope(Dispatchers.IO).launch {
-            (1..254).map { n ->
-                async { probe("$prefix.$n") }
-            }.awaitAll().filterNotNull().let { found ->
-                hosts.value = found.sortedBy { it.label.lowercase() }
-            }
+            val targets = prefixes.flatMap { p -> (1..254).map { "$p.$it" } }
+            val found = targets.map { ip -> async { probe(ip) } }.awaitAll().filterNotNull()
+            hosts.value = found.distinctBy { it.ip }.sortedBy { it.label.lowercase() }
             scanning.value = false
         }
     }
